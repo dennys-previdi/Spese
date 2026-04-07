@@ -1,99 +1,95 @@
-<!-- AUTO-GENERATED-CONTENT:START (STARTER) -->
-<p align="center">
-  <a href="https://www.gatsbyjs.com">
-    <img alt="Gatsby" src="https://www.gatsbyjs.com/Gatsby-Monogram.svg" width="60" />
-  </a>
-</p>
-<h1 align="center">
-  Gatsby's default starter
-</h1>
+# Spese di Casa
 
-Kick off your project with this default boilerplate. This starter ships with the main Gatsby configuration files you might need to get up and running blazing fast with the blazing fast app generator for React.
+Web app per gestire le spese di casa con vista calendario heatmap, importazione CSV dall'app **Wallet** (BudgetBakers), spese ricorrenti con aggiustamento per festività italiane e supporto multi-conto.
 
-_Have another more specific idea? You may want to check out our vibrant collection of [official and community-created starters](https://www.gatsbyjs.com/docs/gatsby-starters/)._
+Stack: **React + Vite** (frontend), **Supabase** (database), deploy su **Vercel**.
 
-## 🚀 Quick start
+## Funzionalità
 
-1.  **Create a Gatsby site.**
+- Calendario mensile con colorazione **heatmap** in base al totale speso ogni giorno.
+- Marker delle festività italiane (festività nazionali + Pasqua/Pasquetta).
+- Click su un giorno per vedere le spese effettuate e quelle pianificate.
+- **Importazione CSV** dall'app Wallet con dedup tramite `external_id`.
+- **Spese ricorrenti** mensili / settimanali / annuali con possibilità di:
+  - Spostare la data al giorno lavorativo **precedente** o **successivo** in caso di festivo o weekend.
+- **Conti multipli** (carta, contanti, conto corrente, ...) con filtro nel calendario.
 
-    Use the Gatsby CLI to create a new site, specifying the default starter.
+## Setup
 
-    ```shell
-    # create a new Gatsby site using the default starter
-    gatsby new my-default-starter https://github.com/gatsbyjs/gatsby-starter-default
-    ```
+### 1. Supabase
 
-1.  **Start developing.**
+1. Crea un progetto su [supabase.com](https://supabase.com).
+2. Apri lo **SQL Editor** ed esegui il contenuto di `supabase/schema.sql`.
+3. In *Project Settings → API* prendi nota di `Project URL` e `anon public key`.
 
-    Navigate into your new site’s directory and start it up.
+### 2. Variabili d'ambiente
 
-    ```shell
-    cd my-default-starter/
-    gatsby develop
-    ```
+Copia `.env.example` in `.env` e compila:
 
-1.  **Open the source code and start editing!**
+```
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=...
+```
 
-    Your site is now running at `http://localhost:8000`!
+### 3. Sviluppo locale
 
-    _Note: You'll also see a second link: _`http://localhost:8000/___graphql`_. This is a tool you can use to experiment with querying your data. Learn more about using this tool in the [Gatsby tutorial](https://www.gatsbyjs.com/tutorial/part-five/#introducing-graphiql)._
+```bash
+npm install
+npm run dev
+```
 
-    Open the `my-default-starter` directory in your code editor of choice and edit `src/pages/index.js`. Save your changes and the browser will update in real time!
+### 4. Deploy su Vercel
 
-## 🧐 What's inside?
+1. Crea un nuovo progetto Vercel collegato a questo repo.
+2. Imposta le stesse variabili d'ambiente (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+3. Vercel rileva automaticamente Vite (vedi `vercel.json`).
 
-A quick look at the top-level files and directories you'll see in a Gatsby project.
+## Importazione CSV Wallet
 
-    .
-    ├── node_modules
-    ├── src
-    ├── .gitignore
-    ├── .prettierrc
-    ├── gatsby-browser.js
-    ├── gatsby-config.js
-    ├── gatsby-node.js
-    ├── gatsby-ssr.js
-    ├── LICENSE
-    ├── package-lock.json
-    ├── package.json
-    └── README.md
+L'app Wallet (BudgetBakers) esporta CSV con colonne tipo `date`, `amount`, `category`, `account`, `note`, `currency`. Il parser è tollerante:
 
-1.  **`/node_modules`**: This directory contains all of the modules of code that your project depends on (npm packages) are automatically installed.
+- Riconosce sia formati ISO (`YYYY-MM-DD`) sia formati italiani (`DD/MM/YYYY`).
+- Riconosce numeri sia in formato `1.234,56` sia `1234.56`.
+- Importa solo le **spese** (importi negativi), ignora le entrate.
+- Mappa automaticamente il nome del conto Wallet su un conto esistente in app (case-insensitive). Se non trovato, usa il "conto di default" selezionato in fase di import.
+- Dedup tramite `external_id` (combinazione di data, importo, conto, nota).
 
-2.  **`/src`**: This directory will contain all of the code related to what you will see on the front-end of your site (what you see in the browser) such as your site header or a page template. `src` is a convention for “source code”.
+## Spese ricorrenti
 
-3.  **`.gitignore`**: This file tells git which files it should not track / not maintain a version history for.
+Per ogni ricorrenza puoi specificare:
 
-4.  **`.prettierrc`**: This is a configuration file for [Prettier](https://prettier.io/). Prettier is a tool to help keep the formatting of your code consistent.
+- **Frequenza**: mensile, settimanale o annuale
+- **Giorno**: del mese (1-31), della settimana o data esatta (per annuali)
+- **Aggiustamento festività**:
+  - *Nessuno*: lascia la data così com'è
+  - *Giorno lavorativo precedente*: se cade in weekend o festa, sposta indietro
+  - *Giorno lavorativo successivo*: sposta avanti
+- **Periodo di validità** con data inizio e (opzionale) data fine
+- **Conto** di addebito
 
-5.  **`gatsby-browser.js`**: This file is where Gatsby expects to find any usage of the [Gatsby browser APIs](https://www.gatsbyjs.com/docs/browser-apis/) (if any). These allow customization/extension of default Gatsby settings affecting the browser.
+Le occorrenze sono calcolate al volo nel calendario (non vengono materializzate nel DB), quindi puoi modificare la regola in qualsiasi momento.
 
-6.  **`gatsby-config.js`**: This is the main configuration file for a Gatsby site. This is where you can specify information about your site (metadata) like the site title and description, which Gatsby plugins you’d like to include, etc. (Check out the [config docs](https://www.gatsbyjs.com/docs/gatsby-config/) for more detail).
+## Note sulla sicurezza
 
-7.  **`gatsby-node.js`**: This file is where Gatsby expects to find any usage of the [Gatsby Node APIs](https://www.gatsbyjs.com/docs/node-apis/) (if any). These allow customization/extension of default Gatsby settings affecting pieces of the site build process.
+In questo MVP la RLS è **disabilitata** (uso single-user). Per uso multi-utente abilita Auth in Supabase, attiva RLS sulle tabelle e aggiungi una colonna `user_id` con policy `auth.uid() = user_id`.
 
-8.  **`gatsby-ssr.js`**: This file is where Gatsby expects to find any usage of the [Gatsby server-side rendering APIs](https://www.gatsbyjs.com/docs/ssr-apis/) (if any). These allow customization of default Gatsby settings affecting server-side rendering.
+## Struttura
 
-9.  **`LICENSE`**: This Gatsby starter is licensed under the 0BSD license. This means that you can see this file as a placeholder and replace it with your own license.
-
-10. **`package-lock.json`** (See `package.json` below, first). This is an automatically generated file based on the exact versions of your npm dependencies that were installed for your project. **(You won’t change this file directly).**
-
-11. **`package.json`**: A manifest file for Node.js projects, which includes things like metadata (the project’s name, author, etc). This manifest is how npm knows which packages to install for your project.
-
-12. **`README.md`**: A text file containing useful reference information about your project.
-
-## 🎓 Learning Gatsby
-
-Looking for more guidance? Full documentation for Gatsby lives [on the website](https://www.gatsbyjs.com/). Here are some places to start:
-
-- **For most developers, we recommend starting with our [in-depth tutorial for creating a site with Gatsby](https://www.gatsbyjs.com/tutorial/).** It starts with zero assumptions about your level of ability and walks through every step of the process.
-
-- **To dive straight into code samples, head [to our documentation](https://www.gatsbyjs.com/docs/).** In particular, check out the _Guides_, _API Reference_, and _Advanced Tutorials_ sections in the sidebar.
-
-## 💫 Deploy
-
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/gatsbyjs/gatsby-starter-default)
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/gatsbyjs/gatsby-starter-default)
-
-<!-- AUTO-GENERATED-CONTENT:END -->
+```
+src/
+├── App.jsx
+├── main.jsx
+├── styles.css
+├── components/
+│   ├── Calendar.jsx        # vista calendario heatmap
+│   ├── CsvUpload.jsx       # importazione CSV Wallet
+│   ├── Accounts.jsx        # gestione conti
+│   └── Recurring.jsx       # gestione spese ricorrenti
+└── lib/
+    ├── supabase.js         # client supabase
+    ├── csv.js              # parser CSV Wallet
+    ├── holidays.js         # festività italiane + adjust
+    └── recurring.js        # espansione ricorrenze
+supabase/
+└── schema.sql              # schema DB
+```
